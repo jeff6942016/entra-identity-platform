@@ -1,0 +1,25 @@
+{
+  "properties": {
+    "roleName": "Storage Operator (custom)",
+    "description": "Manage storage accounts only, least privilege",
+    "type": "CustomRole",
+    "permissions": [
+      {
+        "actions": [
+          "Microsoft.Storage/storageAccounts/read",
+          "Microsoft.Storage/storageAccounts/write",
+          "Microsoft.Storage/storageAccounts/listKeys/action"
+        ],
+        "notActions": [],
+        "dataActions": [
+          "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
+          "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write"
+        ],
+        "notDataActions": []
+      }
+    ],
+    "assignableScopes": [
+      "/subscriptions/fe8b2d02-e79c-4e56-aebc-62ebcb6670da"
+    ]
+  }
+}

@@ -1,5 +1,10 @@
 # Entra ID IAM Automation Toolkit
 
+![Microsoft Entra ID](https://img.shields.io/badge/Microsoft_Entra_ID-Identity-0067b8?logo=microsoftazure&logoColor=white)
+![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-5391FE?logo=powershell&logoColor=white)
+![Microsoft Graph](https://img.shields.io/badge/Microsoft_Graph-PowerShell_SDK-242424?logo=microsoft&logoColor=white)
+![Focus](https://img.shields.io/badge/Focus-Identity_Lifecycle_(JML)-success)
+
 A set of PowerShell scripts that automate the full identity lifecycle in Microsoft Entra ID using the Microsoft Graph PowerShell SDK. The toolkit covers **joiner, mover, and leaver** operations plus **access reporting** and **audit log export**, and every operation it performs is captured in the tenant's own audit trail.
 
 Built and tested against a live Entra ID tenant. Each script below is shown running against real users, with the resulting state changes verified through the access report.

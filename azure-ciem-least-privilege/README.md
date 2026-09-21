@@ -2,6 +2,12 @@
 
 > A cloud infrastructure entitlement management (CIEM) lab built on Microsoft Entra ID and Azure RBAC. It seeds four realistic over-provisioning findings, detects each one from Azure Activity logs with KQL, and remediates them down to least privilege using PIM just-in-time access, scope reduction, access reviews, and a purpose-built custom role. This is the entitlement plane of the identity chain: not who someone is, but what they can do to cloud resources, and whether that access is right-sized.
 
+![Azure RBAC](https://img.shields.io/badge/Azure%20RBAC-least%20privilege-0078D4)
+![Entra ID P2](https://img.shields.io/badge/Microsoft%20Entra%20ID-P2-0078D4)
+![PIM](https://img.shields.io/badge/PIM-just%20in%20time-5C2D91)
+![KQL](https://img.shields.io/badge/Detection-KQL-blue)
+![Access Reviews](https://img.shields.io/badge/Access%20Reviews-auto%20apply-107C10)
+![Focus](https://img.shields.io/badge/Focus-CIEM%20%2F%20Entitlement%20Right--Sizing-brightgreen)
 ---
 
 ## Why this lab
@@ -239,8 +245,4 @@ Cloud infrastructure entitlement management (CIEM); least-privilege enforcement 
 
 Microsoft Entra ID (P2), Azure RBAC, Azure Privileged Identity Management, Azure Monitor, Log Analytics (KQL), Azure CLI.
 
----
 
-## Future work
-
-**AWS IAM Access Analyzer (CIEM Track A).** The honest limitation of this lab is that Azure-native tooling does not auto-compute usage-based least privilege. AWS IAM Access Analyzer does exactly that (unused-access findings, least-privilege policy generation from CloudTrail history, external-access findings) and does it on free-tier functionality. Building the equivalent finding-and-remediation loop in AWS would demonstrate the same discipline across a second cloud, which is the direction CIEM as a field is heading.

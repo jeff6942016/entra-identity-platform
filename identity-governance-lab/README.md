@@ -66,11 +66,11 @@ flowchart TD
 
 Test identities created to exercise the governance flows: a requester, an approver, a resource owner (who acts as reviewer), and a B2B guest for the external path.
 
-![Test users](screenshots/00-users-test-cast.png)
+![Test users](screenshots/01_user-list.png)
 
 `SG-Finance-App-Users` was created with a dedicated owner so the access review could route to a resource owner rather than to me directly.
 
-![Group owner](screenshots/00-group-owner.png)
+![Group owner](screenshots/02_group-owner.png)
 
 ---
 
@@ -78,7 +78,7 @@ Test identities created to exercise the governance flows: a requester, an approv
 
 The catalog is the governance boundary that groups resources so they can be delegated and packaged as a unit. `Finance Access` was enabled for external users at creation, which is required before guests can be governed through it later.
 
-![Catalog overview](screenshots/01-catalog-overview.png)
+![Catalog overview](screenshots/03_catalog.png)
 
 ---
 
@@ -88,23 +88,21 @@ The access package `Finance App Access` bundles the group (and app role) that a 
 
 **Who can request:**
 
-![Request scope](screenshots/02-package-requests-scope.png)
+![Request scope](screenshots/05_request_access.png)
 
 **Approval:** single-stage, Manager as approver with a named fallback, requestor and approver justification required, 14-day decision deadline.
 
-![Approval configuration](screenshots/02-package-approval.png)
+![Approval configuration](screenshots/04_request-just_approval.png)
 
 > Note: because the test requester has no manager set, approval fell through to the fallback approver. This is worth understanding for the exam: "Manager as approver" needs a manager attribute populated, or a fallback, or the request stalls.
 
 **Requestor information:** a custom "Business justification for access?" question captured for the audit trail.
 
-![Requestor information](screenshots/02-package-requestor-info.png)
+![Requestor information](screenshots/06_question.png)
 
 **Lifecycle:** assignments expire after 30 days, and access reviews are required on the assignment.
 
-![Lifecycle settings](screenshots/02-package-lifecycle.png)
-
-<!-- Optional: add screenshots/02-package-resource-roles.png (the Resource roles tab showing the group + app role) if captured -->
+![Lifecycle settings](screenshots/07_lifecycle.png)
 
 ---
 
@@ -112,14 +110,11 @@ The access package `Finance App Access` bundles the group (and app role) that a 
 
 Terms of use is created under Identity Governance but enforced through Conditional Access, linking the governance and access-management domains.
 
-![Terms of use object](screenshots/03-tou-object.png)
+![Terms of use object](screenshots/10_ToU_Object.png)
 
 The ToU is referenced as a grant control in a Conditional Access policy targeting the finance group, with the break-glass account excluded.
 
-![Conditional Access policy](screenshots/03-ca-policy.png)
-
-<!-- Optional: flip the CA policy from Report-only to On, then add:
-     screenshots/03-tou-acceptance-prompt.png (the acceptance screen an end user sees when the policy fires) -->
+![Conditional Access policy](screenshots/09_conditional_access_policy.png)
 
 ---
 
@@ -127,15 +122,15 @@ The ToU is referenced as a grant control in a Conditional Access policy targetin
 
 **Connected organization** defines which external partner is allowed to request the package.
 
-![Connected organization](screenshots/04-connected-org.png)
+![Connected organization](screenshots/11_connected_org.png)
 
 A second request policy (`External Users`) scopes external requests separately from internal ones.
 
-![Package policies](screenshots/04-package-policies.png)
+![Package policies](screenshots/12_access_package_policies.png)
 
 **External-user lifecycle:** when a governed guest loses their last access-package assignment, they are blocked from sign-in and removed after 30 days. This is the automatic-cleanup control that prevents orphaned guest accounts.
 
-![External-user lifecycle](screenshots/04-external-lifecycle.png)
+![External-user lifecycle](screenshots/13_ext-user_lifecycle.png)
 
 ---
 
@@ -145,15 +140,15 @@ The full cycle, executed with real test accounts rather than just configured.
 
 **Requester submits** through the My Access portal:
 
-![Request submitted](screenshots/05-request-submitted.png)
+![Request submitted](screenshots/14_user-request.png)
 
 **Approver sees the pending request** and can approve or deny with justification:
 
-![Approval pending](screenshots/05-approval-pending.png)
+![Approval pending](screenshots/15_user-approve.png)
 
 **Assignment delivered** after approval, with the 30-day expiry visible (end date 10/22/2026):
 
-![Assignment delivered](screenshots/05-assignment-delivered.png)
+![Assignment delivered](screenshots/16_req-user_access.png)
 
 This chain (request → approval → time-bound assignment) is the core evidence that entitlement management works as a governed process, not a manual group edit.
 
@@ -165,23 +160,21 @@ The recertification half of the lab, run end to end.
 
 **Review configuration:** scoped to `SG-Finance-App-Users`, reviewer is the group owner, weekly recurrence.
 
-![Review confirm](screenshots/06-review-confirm.png)
+![Review configuration](screenshots/17_access-review1_half1.png)
 
 **Review settings:** auto-apply results to the resource, remove access if reviewers do not respond, decision helpers based on 30 days of sign-in inactivity, and justification required.
 
-![Review settings](screenshots/06-review-settings.png)
+![Review settings](screenshots/18_access-review1_half2.png)
 
 **Reviewer view (before decision):** the decision helper recommends **Deny** with reason "Inactive user," signed in as the group owner:
 
-![Review pending](screenshots/06-review-pending.png)
+![Review pending](screenshots/19_before_access-review.png)
 
 **Reviewer decision (after):** access denied, recorded against Owner User:
 
-![Review decided](screenshots/06-review-decided.png)
+![Review decided](screenshots/20_after_access-review.png)
 
 With auto-apply enabled, the denied user's group membership is removed automatically, closing the loop from detection to remediation.
-
-<!-- Optional: add screenshots/06-membership-after-removal.png (SG-Finance-App-Users members list showing the denied user removed) to prove auto-apply fired -->
 
 ---
 
@@ -212,7 +205,3 @@ Two boundaries worth noting:
 - **Decision helpers are what make reviews scale.** The "Inactive user" recommendation came from last-sign-in data. In a real review of hundreds of users, a reviewer leans on those signals instead of eyeballing every account.
 - **Auto-apply is the difference between a report and a control.** Without it, a review only produces a list of decisions. With it, denied access is actually removed.
 - **Terms of use spans two domains.** It is authored in governance but only enforced once wired into a Conditional Access grant control.
-
----
-
-

@@ -245,6 +245,35 @@ Two boundaries worth noting:
 
 ---
 
+## Key Concepts Demonstrated
+
+- **Least privilege** — access is granted through requestable packages with defined roles, not standing group membership, and expires after 30 days rather than persisting indefinitely.
+- **Separation of duties** — requester, approver, and reviewer are distinct identities; no account approves its own access.
+- **Delegated administration** — the catalog acts as a governance boundary, letting a resource owner manage access without a tenant-wide admin role.
+- **Time-bound (just-enough-in-time) access** — assignment expiry and access reviews ensure entitlements are re-justified, not permanent.
+- **Recertification** — periodic access reviews catch privilege creep and satisfy SOC 2 / PCI access-attestation requirements.
+- **Governed external identity** — connected organizations define trusted partners, and the external-user lifecycle auto-removes guests who lose their last assignment, closing the orphaned-guest gap.
+- **Cross-plane enforcement** — terms of use is authored in identity governance but enforced through a Conditional Access grant control.
+- **Auditability** — required justification, approval records, and review decisions produce a complete evidence trail.
+- **Joiner-Mover-Leaver lifecycle** — request/approval covers joiner and mover; expiry, external lifecycle, and auto-apply cover leaver.
+- **Zero Trust ("verify explicitly")** — every grant is conditional, logged, and subject to re-verification.
+
+---
+
+## Skills Demonstrated
+
+- Creating and configuring **catalogs** with delegated ownership
+- Building **access packages** with resource roles and multiple request policies
+- Configuring **approval workflows** (single-stage, manager-as-approver with fallback, justification, decision deadlines)
+- Implementing **terms of use** and enforcing it via **Conditional Access**
+- Configuring **connected organizations** and **external-user lifecycle** settings
+- Running the **My Access** request-and-approval flow end to end as separate users
+- Designing and executing **access reviews** with decision helpers and auto-apply remediation
+- Validating **P2 vs Entra ID Governance SKU** feature boundaries in a live tenant
+- Documenting an identity governance process with architecture diagram and lessons learned
+
+---
+
 ## Lessons learned
 
 - **Manager-as-approver has a dependency.** With no manager attribute set, approval only works because a fallback approver was configured.

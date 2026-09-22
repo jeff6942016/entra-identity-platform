@@ -7,7 +7,19 @@
 
 Entitlement management and access reviews built end to end in a Microsoft Entra ID P2 trial tenant, demonstrating self-service access with approval, time-bound assignments, governed external access, and access recertification with automatic remediation.
 
-This lab covers the **Plan and automate identity governance** domain of SC-300 (Microsoft Identity and Access Administrator) and the "govern" stage of my broader Entra identity platform work.
+This lab covers the **Plan and automate identity governance** domain of SC-300 and the "govern" stage of my broader Entra identity platform work.
+
+---
+
+## The concept in one line
+
+Identity governance answers three questions continuously: **who should have access, are they using it appropriately, and how is it removed when they no longer need it.** This lab implements all three across the joiner-mover-leaver (JML) lifecycle, anchored to the principle of least privilege and Zero Trust's "verify explicitly."
+
+| Governance question | Control in this lab | JML stage |
+|---|---|---|
+| Who should get access, and who approves it? | Access packages + approval policy | Joiner / Mover |
+| Is the access still appropriate? | Access reviews (recertification) | Mover |
+| How is access removed? | Assignment expiry + external-user lifecycle + auto-apply | Leaver |
 
 ---
 
@@ -64,27 +76,42 @@ flowchart TD
 
 ## Phase 0: Environment and test cast
 
-Test identities created to exercise the governance flows: a requester, an approver, a resource owner (who acts as reviewer), and a B2B guest for the external path.
+**Concept:** Governance controls act on identities, so the test cast is modeled to mirror separation of duties. The requester, approver, and reviewer are deliberately different accounts. No single identity both requests and approves its own access.
+
+<details>
+<summary>Screenshots: test users and group owner</summary>
+
+Test identities: a requester, an approver, a resource owner (reviewer), and a B2B guest for the external path.
 
 ![Test users](screenshots/01_user-list.png)
 
-`SG-Finance-App-Users` was created with a dedicated owner so the access review could route to a resource owner rather than to me directly.
+`SG-Finance-App-Users` given a dedicated owner so the access review routes to a resource owner, not to me directly.
 
 ![Group owner](screenshots/02_group-owner.png)
+
+</details>
 
 ---
 
 ## Phase 1: Catalog
 
-The catalog is the governance boundary that groups resources so they can be delegated and packaged as a unit. `Finance Access` was enabled for external users at creation, which is required before guests can be governed through it later.
+**Concept:** A catalog is the delegation boundary of entitlement management. It lets a resource owner govern their own resources without holding a tenant-wide admin role, which is least privilege applied to administration itself. Enabling external users at creation is what later allows guests to be governed through it.
+
+<details>
+<summary>Screenshot: catalog overview</summary>
 
 ![Catalog overview](screenshots/03_catalog.png)
+
+</details>
 
 ---
 
 ## Phase 2: Access package with approval
 
-The access package `Finance App Access` bundles the group (and app role) that a requester receives, gated by a request policy.
+**Concept:** The access package separates two things that are easy to conflate: **what access you receive** (resource roles) and **who may request it and how it is approved** (the policy). Approval with required justification creates the audit trail; the 30-day expiry means the entitlement is time-bound rather than standing privilege. Both are core least-privilege ideas.
+
+<details>
+<summary>Screenshots: request scope, approval, requestor info, lifecycle</summary>
 
 **Who can request:**
 
@@ -94,8 +121,6 @@ The access package `Finance App Access` bundles the group (and app role) that a 
 
 ![Approval configuration](screenshots/04_request-just_approval.png)
 
-> Note: because the test requester has no manager set, approval fell through to the fallback approver. This is worth understanding for the exam: "Manager as approver" needs a manager attribute populated, or a fallback, or the request stalls.
-
 **Requestor information:** a custom "Business justification for access?" question captured for the audit trail.
 
 ![Requestor information](screenshots/06_question.png)
@@ -104,23 +129,37 @@ The access package `Finance App Access` bundles the group (and app role) that a 
 
 ![Lifecycle settings](screenshots/07_lifecycle.png)
 
+</details>
+
+> **Understanding note:** "Manager as approver" depends on the requester having a manager attribute set. My test user had none, so approval fell through to the named fallback. In production the manager attribute must be populated and maintained, or approvals stall silently.
+
 ---
 
 ## Phase 3: Terms of use
 
-Terms of use is created under Identity Governance but enforced through Conditional Access, linking the governance and access-management domains.
+**Concept:** Terms of use is the compliance-consent gate. It is authored under Identity Governance but enforced through a Conditional Access grant control, which shows the governance plane and the access plane are wired together rather than separate. Acceptance is recorded, which is what an auditor looks for.
+
+<details>
+<summary>Screenshots: ToU object and Conditional Access policy</summary>
 
 ![Terms of use object](screenshots/10_ToU_Object.png)
 
-The ToU is referenced as a grant control in a Conditional Access policy targeting the finance group, with the break-glass account excluded.
+The ToU referenced as a grant control in a CA policy targeting the finance group, with the break-glass account excluded.
 
 ![Conditional Access policy](screenshots/09_conditional_access_policy.png)
+
+</details>
 
 ---
 
 ## Phase 4: External users
 
-**Connected organization** defines which external partner is allowed to request the package.
+**Concept:** Guests are the higher-risk half of governance because they are outside the org's control. A connected organization defines which external partner is trusted to request access, and the external-user lifecycle automatically removes a guest once they lose their last assignment. That closes the orphaned-guest gap, which is one of the most common access-audit findings.
+
+<details>
+<summary>Screenshots: connected org, package policies, external-user lifecycle</summary>
+
+**Connected organization** defines the trusted external partner.
 
 ![Connected organization](screenshots/11_connected_org.png)
 
@@ -128,53 +167,61 @@ A second request policy (`External Users`) scopes external requests separately f
 
 ![Package policies](screenshots/12_access_package_policies.png)
 
-**External-user lifecycle:** when a governed guest loses their last access-package assignment, they are blocked from sign-in and removed after 30 days. This is the automatic-cleanup control that prevents orphaned guest accounts.
+**External-user lifecycle:** a governed guest is blocked from sign-in and removed 30 days after losing their last access-package assignment.
 
 ![External-user lifecycle](screenshots/13_ext-user_lifecycle.png)
+
+</details>
 
 ---
 
 ## Phase 5: Request flow end to end
 
-The full cycle, executed with real test accounts rather than just configured.
+**Concept:** This is the joiner/mover path in action. Self-service request with approval turns access from a manual help-desk ticket into a governed workflow: the user gets access faster, the org keeps control and a full evidence trail, and the entitlement carries its own expiry. Configured is not the same as proven, so the cycle was actually run.
 
-**Requester submits** through the My Access portal:
+<details>
+<summary>Screenshots: request submitted, approval pending, assignment delivered</summary>
+
+**Requester submits** through the My Access portal.
 
 ![Request submitted](screenshots/14_user-request.png)
 
-**Approver sees the pending request** and can approve or deny with justification:
+**Approver sees the pending request** and approves or denies with justification.
 
 ![Approval pending](screenshots/15_user-approve.png)
 
-**Assignment delivered** after approval, with the 30-day expiry visible (end date 10/22/2026):
+**Assignment delivered** after approval, with the 30-day expiry visible (end date 10/22/2026).
 
 ![Assignment delivered](screenshots/16_req-user_access.png)
 
-This chain (request → approval → time-bound assignment) is the core evidence that entitlement management works as a governed process, not a manual group edit.
+</details>
 
 ---
 
-## Governance report: the access review cycle
+## Phase 6: Access review cycle (the governance report)
 
-The recertification half of the lab, run end to end.
+**Concept:** Access reviews are recertification, the periodic "does this person still need this?" control. It is what catches privilege creep over time and satisfies SOC 2 and PCI access-review requirements. Two pieces make it real rather than cosmetic: **decision helpers** surface inactivity so a reviewer is not eyeballing hundreds of users, and **auto-apply** turns the decision into enforced removal. That auto-removal is the leaver/cleanup stage of the lifecycle.
+
+<details>
+<summary>Screenshots: review config, settings, reviewer decision before and after</summary>
 
 **Review configuration:** scoped to `SG-Finance-App-Users`, reviewer is the group owner, weekly recurrence.
 
 ![Review configuration](screenshots/17_access-review1_half1.png)
 
-**Review settings:** auto-apply results to the resource, remove access if reviewers do not respond, decision helpers based on 30 days of sign-in inactivity, and justification required.
+**Review settings:** auto-apply to the resource, remove access if reviewers do not respond, decision helpers on 30 days of sign-in inactivity, justification required.
 
 ![Review settings](screenshots/18_access-review1_half2.png)
 
-**Reviewer view (before decision):** the decision helper recommends **Deny** with reason "Inactive user," signed in as the group owner:
+**Reviewer view (before):** decision helper recommends **Deny**, reason "Inactive user," signed in as the group owner.
 
 ![Review pending](screenshots/19_before_access-review.png)
 
-**Reviewer decision (after):** access denied, recorded against Owner User:
+**Reviewer decision (after):** access denied, recorded against Owner User. Auto-apply then removes the membership.
 
 ![Review decided](screenshots/20_after_access-review.png)
 
-With auto-apply enabled, the denied user's group membership is removed automatically, closing the loop from detection to remediation.
+</details>
 
 ---
 
@@ -194,14 +241,14 @@ Confirmed live in the P2 trial tenant before building:
 Two boundaries worth noting:
 
 - **Access packages are not reviewable from the global Access reviews blade.** That blade only offers Teams + Groups and Applications. Access-package assignment reviews are configured from the package's own policy lifecycle instead.
-- **Reviewing guest users under governance now requires a linked Azure subscription** (change effective January 15, 2026, billed per unique guest). To avoid that cost, reviews in this lab were kept scoped to internal users.
+- **Reviewing guest users under governance now requires a linked Azure subscription** (change effective January 15, 2026, billed per unique guest). Reviews here were kept scoped to internal users to avoid that cost.
 
 ---
 
 ## Lessons learned
 
-- **Manager-as-approver has a dependency.** With no manager attribute set, approval only works because a fallback approver was configured. In a real tenant the manager attribute has to be populated and maintained, or fallbacks planned.
-- **Two review types start differently.** A group review created from the global blade instantiates quickly; a package-policy review is scheduled and can take up to a day to become active, and its frequency (quarterly vs weekly) changes how soon the first instance appears. For a fast lab cycle, weekly is the right choice.
-- **Decision helpers are what make reviews scale.** The "Inactive user" recommendation came from last-sign-in data. In a real review of hundreds of users, a reviewer leans on those signals instead of eyeballing every account.
-- **Auto-apply is the difference between a report and a control.** Without it, a review only produces a list of decisions. With it, denied access is actually removed.
-- **Terms of use spans two domains.** It is authored in governance but only enforced once wired into a Conditional Access grant control.
+- **Manager-as-approver has a dependency.** With no manager attribute set, approval only works because a fallback approver was configured.
+- **Two review types start differently.** A group review from the global blade instantiates quickly; a package-policy review is scheduled and can take up to a day, and its frequency (quarterly vs weekly) changes how soon the first instance appears.
+- **Decision helpers are what make reviews scale.** The "Inactive user" flag came from last-sign-in data, which is how a reviewer handles hundreds of accounts.
+- **Auto-apply is the difference between a report and a control.** Without it a review only produces a list of decisions; with it, denied access is actually removed.
+- **Terms of use spans two planes.** Authored in governance, enforced only once wired into a Conditional Access grant control.

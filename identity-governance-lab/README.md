@@ -1,5 +1,10 @@
 # Microsoft Entra Identity Governance Lab
 
+![Microsoft Entra ID](https://img.shields.io/badge/Microsoft_Entra_ID-0078D4?style=flat&logo=microsoftazure&logoColor=white)
+![License](https://img.shields.io/badge/License-P2-512BD4?style=flat)
+![SC-300](https://img.shields.io/badge/SC--300-Identity_Governance-107C10?style=flat)
+![Identity Governance](https://img.shields.io/badge/Identity_Governance-Entitlement_Management_%7C_Access_Reviews-5C2D91?style=flat)
+
 Entitlement management and access reviews built end to end in a Microsoft Entra ID P2 trial tenant, demonstrating self-service access with approval, time-bound assignments, governed external access, and access recertification with automatic remediation.
 
 This lab covers the **Plan and automate identity governance** domain of SC-300 (Microsoft Identity and Access Administrator) and the "govern" stage of my broader Entra identity platform work.
@@ -210,6 +215,4 @@ Two boundaries worth noting:
 
 ---
 
-## Repo placement
 
-This lab is the governance component of my Entra identity platform work. It can stand alone or slot under the "govern" stage alongside the CIEM/least-privilege and privileged-access (PIM) labs.

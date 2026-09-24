@@ -42,12 +42,13 @@ flowchart TD
     REV -->|approve| KEEP
 ```
 
-
 ---
 
 ## Phase 1: PIM for Entra roles
 
-**Concept:** Making a privileged directory role eligible instead of standing is the heart of PIM. `pim.user1` can activate User Administrator when needed, with MFA, justification, and a ticket required at activation, but holds nothing until then.
+**Concept:** Making a privileged directory role eligible instead of active is the core PIM move. `pim.user1` can activate User Administrator on demand, with MFA, justification, and a ticket required, but carries no admin rights the rest of the time.
+
+**Why it matters:** A standing admin account is a permanent, high-value target that sits idle with full rights almost all the time, which is exactly the window an attacker wants after a phish. Eligibility shrinks that window to only the minutes the access is actually in use and logged, and tying each activation to a ticket makes every elevation traceable to a real task instead of silent standing power.
 
 <details>
 <summary>Result</summary>
@@ -87,7 +88,9 @@ Activation with justification and ticket:
 
 ## Phase 2: PIM for Groups
 
-**Concept:** PIM for Groups extends just-in-time elevation to group membership, which covers privileged access that is not a directory role. `pim.user2` is eligible for the `PIM-Users` group and activates into it on demand.
+**Concept:** PIM for Groups extends just-in-time elevation to group membership. `pim.user2` is eligible for the `PIM-Users` group and activates into it only when needed.
+
+**Why it matters:** Not all privilege is a directory role. Access granted through group membership (app roles, SaaS entitlements, role-assignable groups) is a blind spot if only directory roles are just-in-time. Governing groups with PIM closes that gap so membership-based privilege is also time-bound, and it provides JIT for privileged access that has no native PIM role of its own.
 
 <details>
 <summary>Result</summary>
@@ -115,7 +118,9 @@ Group member activation settings:
 
 ## Phase 3: PIM for Azure resources
 
-**Concept:** PIM also governs Azure RBAC, which is a separate system from Entra roles. Contributor on the subscription is made eligible, so cloud resource privilege is just-in-time as well.
+**Concept:** PIM also governs Azure RBAC, a separate authorization system from Entra roles. Contributor on the subscription is made eligible, so resource-plane privilege is just-in-time too.
+
+**Why it matters:** Entra roles and Azure RBAC are two distinct planes: a Global Administrator is not automatically an Azure Owner, and both real incidents and the exam hinge on that separation. A standing Contributor on a subscription has an enormous blast radius, so making it eligible means any change to cloud resources requires a deliberate, audited elevation rather than being permanently available.
 
 <details>
 <summary>Result</summary>
@@ -134,7 +139,9 @@ Activated Azure resource role:
 
 ## Phase 4: Approval workflow
 
-**Concept:** Requiring approval to activate enforces separation of duties on privilege. `pim.user2` requests User Administrator, and `pim.approver` (a different identity) must approve before the role becomes active.
+**Concept:** Requiring approval to activate adds a human gate. `pim.user2` requests User Administrator, and `pim.approver`, a different identity, must approve before the role goes active.
+
+**Why it matters:** MFA and justification prove who is elevating and why, but not whether it should be allowed at all. Approval enforces separation of duties so no one self-elevates into sensitive privilege, and it means a single compromised account cannot silently escalate. The named-approver-plus-fallback design matters because manager-based approval breaks when the manager attribute is empty, which is a common real-world gap.
 
 <details>
 <summary>Result</summary>
@@ -166,7 +173,9 @@ Require approval, with a named approver:
 
 ## Phase 5: Conditional Access authentication context
 
-**Concept:** Instead of the plain "require MFA on activation," the role's activation is wired to a Conditional Access authentication context (`c1 - Privileged activation`). Activation then triggers whatever that Conditional Access policy demands, which is the tighter, policy-driven step-up. This ties PIM directly to Conditional Access.
+**Concept:** Instead of a static "require MFA on activation," the role's activation is wired to a Conditional Access authentication context (`c1 - Privileged activation`). Activation then inherits whatever that Conditional Access policy demands.
+
+**Why it matters:** A fixed MFA toggle cannot adapt. Routing activation through Conditional Access lets the elevation demand phishing-resistant MFA, a compliant device, or a trusted location, and lets those requirements change centrally without editing every role one by one. It reserves the strongest controls for the moment they matter most, the act of elevation, instead of burdening every sign-in, which is Zero Trust's "verify explicitly" applied at the point of privilege.
 
 <details>
 <summary>Result</summary>
@@ -206,7 +215,9 @@ Role setting pointed at the authentication context:
 
 ## Phase 6: PIM alerts
 
-**Concept:** Alerts surface privilege-hygiene problems as they accumulate. The "Roles don't require MFA for activation" alert fired because Directory Readers had no MFA-on-activation setting, and was then remediated with the built-in Fix, clearing the alert.
+**Concept:** PIM alerts flag privilege-hygiene problems. The "Roles don't require MFA for activation" alert fired because Directory Readers had no MFA-on-activation setting, and was cleared with the built-in Fix.
+
+**Why it matters:** Privileged access configuration drifts over time: Global Admins accumulate, roles get activated outside PIM, eligible assignments go stale. Alerts are the continuous-monitoring layer that turns PIM from a one-time setup into ongoing hygiene. This particular alert also shows that role-level and tenant-level controls are evaluated independently, so a role can be non-compliant even in a tenant that already enforces MFA through Conditional Access.
 
 <details>
 <summary>Result</summary>
@@ -234,7 +245,9 @@ Alert detail and one-click Fix:
 
 ## Phase 7: Access review of eligible privileged assignments
 
-**Concept:** Recertification confirms who should stay eligible for User Administrator. The review is scoped to eligible assignments, uses decision helpers based on sign-in activity, and auto-applies results, so a denied user actually loses eligibility.
+**Concept:** An access review recertifies who should stay eligible for User Administrator, scoped to eligible assignments, using decision helpers based on sign-in activity, with auto-apply enforcing the outcome.
+
+**Why it matters:** Eligibility accumulates silently. People change teams and projects end, but their eligible assignments linger, recreating standing-privilege risk in slow motion. Recertification is the periodic "should this person still be able to elevate?" control, and scoping it to eligible privileged assignments targets the highest-risk access. Auto-apply plus activity-based decision helpers make the review actually enforce and scale, instead of becoming a rubber stamp.
 
 <details>
 <summary>Result</summary>
@@ -266,7 +279,9 @@ Review configuration (eligible assignments only, auto-apply):
 
 ## Phase 8: Audit
 
-**Concept:** Analyzing PIM audit history is its own SC-300 objective. The access review audit log records the full lifecycle: review created, updated, and each approve and deny decision, with the initiator captured.
+**Concept:** The audit trail records the full privileged-access lifecycle: assignments, activations, approvals, and review decisions, each with the initiator captured.
+
+**Why it matters:** A just-in-time control is only as strong as the evidence it produces. The audit log is what proves to an auditor or an incident responder who elevated, when, why, who approved it, and who was removed. In a PCI DSS or SOC 2 environment that trail is the difference between claiming least privilege and being able to demonstrate it.
 
 <details>
 <summary>Result</summary>
@@ -298,7 +313,7 @@ Access review audit log (create, update, approve, deny):
 - **Separation of duties:** activation of a privileged role is gated by a different identity's approval.
 - **Step-up authentication:** a Conditional Access authentication context forces stronger verification at the moment of elevation, tied directly to the activation.
 - **Defense in depth:** a role can require MFA at the PIM level and again through Conditional Access, which are two independent controls.
-- **Three PIM surfaces:** Entra directory roles, PIM for Groups, and Azure resource roles are distinct systems that PIM governs together.
+- **Two authorization planes:** Entra directory roles and Azure RBAC are separate systems, and PIM governs both alongside PIM for Groups.
 - **Privileged access recertification:** access reviews periodically confirm who should remain eligible, with auto-apply enforcing the decision.
 - **Auditability:** every activation, approval, and review decision is captured for evidence.
 

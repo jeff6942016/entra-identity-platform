@@ -77,6 +77,8 @@ Each finding follows the same trio: the over-provisioned **before** state, the *
 
 **Remediation:** removed the standing Owner assignment and replaced it with a **PIM-eligible** assignment that must be activated on demand, gated by **MFA and a written justification** and time-limited so it self-expires.
 
+**Why this fix:** Deleting the assignment would break the legitimate occasional work, so the goal is not removal but removing the *standing* target. PIM-eligible keeps the access available on demand while it only exists during a justified, time-boxed, MFA-gated window.
+
 <details>
 <summary>Evidence</summary>
 
@@ -108,6 +110,8 @@ Each finding follows the same trio: the over-provisioned **before** state, the *
 
 **Remediation:** removed the subscription-level assignment and granted **Reader at `rg-it` scope** instead, matching access to where the work actually happens.
 
+**Why this fix:** Least privilege is both the right scope and the right role. The grant was wrong on scope (subscription-wide when work happened in one group) and Contributor was broader than the read-oriented activity, so the fix narrows both at once, down to `rg-it` and down to Reader.
+
 <details>
 <summary>Evidence</summary>
 
@@ -130,6 +134,8 @@ Each finding follows the same trio: the over-provisioned **before** state, the *
 **Finding:** `creep-user` accumulated access through **multiple group memberships** (`Engineering` carrying Backup Operator, `Security` carrying Reader), so effective permissions exceeded the role.
 
 **Remediation:** ran an **access review** scoped to the `Engineering` group with auto-apply enabled, and removed the excess membership so standing Backup Operator was stripped while legitimate Reader access remained.
+
+**Why this fix:** The excess came from group inheritance, not a direct assignment, so the durable fix is governance rather than a one-off edit. An access review with auto-apply strips the unneeded membership and leaves a repeatable, audited control that catches the creep again next cycle, instead of a manual removal that silently re-accumulates.
 
 <details>
 <summary>Evidence</summary>
@@ -157,6 +163,8 @@ Each finding follows the same trio: the over-provisioned **before** state, the *
 **Finding:** `storage-user` held **Contributor at `rg-it`** when the job was only to manage storage. Contributor grants full management of every resource type in the group, including the Key Vault and the Log Analytics workspace.
 
 **Remediation:** authored a **least-privilege custom role** (`Storage Operator (custom)`) scoped to storage actions and blob data actions only, and replaced the Contributor assignment with it.
+
+**Why this fix:** No built-in role matched "manage storage only," so Contributor was the lazy over-grant. A custom role scoped to storage actions is the precise answer, and authoring it shows that least privilege sometimes means defining the role that should have existed rather than settling for the nearest built-in.
 
 <details>
 <summary>Evidence</summary>

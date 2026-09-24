@@ -42,32 +42,6 @@ flowchart TD
     REV -->|approve| KEEP
 ```
 
----
-
-## Key Concepts Demonstrated
-
-- **Just-in-time privilege:** roles are eligible, not standing; an admin holds the role only for a time-bound activation window.
-- **Eligible vs active:** the core PIM distinction, applied across all three surfaces so privilege is requested, not permanently held.
-- **Least privilege for administration:** the same principle applied to admin rights themselves, not just resource access.
-- **Separation of duties:** activation of a privileged role is gated by a different identity's approval.
-- **Step-up authentication:** a Conditional Access authentication context forces stronger verification at the moment of elevation, tied directly to the activation.
-- **Defense in depth:** a role can require MFA at the PIM level and again through Conditional Access, which are two independent controls.
-- **Three PIM surfaces:** Entra directory roles, PIM for Groups, and Azure resource roles are distinct systems that PIM governs together.
-- **Privileged access recertification:** access reviews periodically confirm who should remain eligible, with auto-apply enforcing the decision.
-- **Auditability:** every activation, approval, and review decision is captured for evidence.
-
----
-
-## Skills Demonstrated
-
-- Configuring PIM role settings: activation duration, MFA, justification, ticket information, and approval
-- Creating eligible assignments across Entra roles, PIM for Groups, and Azure resource roles
-- Running just-in-time activation with an approval workflow
-- Wiring a Conditional Access authentication context into PIM activation for step-up MFA
-- Reading and remediating PIM alerts
-- Designing and running an access review scoped to eligible privileged assignments with auto-apply
-- Analyzing PIM and access review audit logs
-- Troubleshooting a Conditional Access authentication-context activation loop
 
 ---
 
@@ -313,6 +287,33 @@ Access review audit log (create, update, approve, deny):
 | PIM-Users (member) | PIM for Groups | 5h | Yes (Azure MFA) | Yes | No | No | None |
 | Contributor (subscription) | Azure resource | Configured | Yes | Yes | No | No | None |
 | Directory Readers | Entra role | Default | Yes (after Fix) | Default | No | No | None |
+
+---
+
+## Key Concepts Demonstrated
+
+- **Just-in-time privilege:** roles are eligible, not standing; an admin holds the role only for a time-bound activation window.
+- **Eligible vs active:** the core PIM distinction, applied across all three surfaces so privilege is requested, not permanently held.
+- **Least privilege for administration:** the same principle applied to admin rights themselves, not just resource access.
+- **Separation of duties:** activation of a privileged role is gated by a different identity's approval.
+- **Step-up authentication:** a Conditional Access authentication context forces stronger verification at the moment of elevation, tied directly to the activation.
+- **Defense in depth:** a role can require MFA at the PIM level and again through Conditional Access, which are two independent controls.
+- **Three PIM surfaces:** Entra directory roles, PIM for Groups, and Azure resource roles are distinct systems that PIM governs together.
+- **Privileged access recertification:** access reviews periodically confirm who should remain eligible, with auto-apply enforcing the decision.
+- **Auditability:** every activation, approval, and review decision is captured for evidence.
+
+---
+
+## Skills Demonstrated
+
+- Configuring PIM role settings: activation duration, MFA, justification, ticket information, and approval
+- Creating eligible assignments across Entra roles, PIM for Groups, and Azure resource roles
+- Running just-in-time activation with an approval workflow
+- Wiring a Conditional Access authentication context into PIM activation for step-up MFA
+- Reading and remediating PIM alerts
+- Designing and running an access review scoped to eligible privileged assignments with auto-apply
+- Analyzing PIM and access review audit logs
+- Troubleshooting a Conditional Access authentication-context activation loop
 
 ---
 

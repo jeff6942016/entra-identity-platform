@@ -1,6 +1,6 @@
 # Entra Identity Platform
 
-Four hands-on labs that together cover the identity and access management lifecycle in Microsoft Entra ID and Azure: **build** the hybrid identity foundation, **operate** it with lifecycle automation, and **govern** access two ways, right-sizing what identities can do and governing how access is requested, approved, and recertified.
+Five hands-on labs that together cover the identity and access management lifecycle in Microsoft Entra ID and Azure: **build** the hybrid identity foundation, **operate** it with lifecycle automation, and **govern** access three ways, right-sizing what identities can do, governing how access is requested and recertified, and enforcing just-in-time privilege for administrators.
 
 ![Microsoft Entra ID](https://img.shields.io/badge/Microsoft_Entra_ID-P2-0067b8?logo=microsoftazure&logoColor=white)
 ![Azure RBAC](https://img.shields.io/badge/Azure_RBAC-Least_Privilege-0078D4?logo=microsoftazure&logoColor=white)
@@ -13,9 +13,9 @@ Four hands-on labs that together cover the identity and access management lifecy
 
 ## Overview
 
-This repository collects four self-contained labs that map to how an IAM team actually works: you stand up an identity environment, you run it day to day, and you govern what people can access and how they get it. Each lab is built and evidenced against a live tenant, and each has its own detailed README with steps, screenshots, and an honest troubleshooting record.
+This repository collects five self-contained labs that map to how an IAM team actually works: you stand up an identity environment, you run it day to day, and you govern what people can access and how they get it. Each lab is built and evidenced against a live tenant, and each has its own detailed README with steps, screenshots, and an honest troubleshooting record.
 
-The labs are grouped here so the through-line is visible. Individually they are four tasks. Together they are a demonstration of the identity lifecycle from on-premises foundation through automated operations to entitlement governance and access recertification.
+The labs are grouped here so the through-line is visible. Individually they are five tasks. Together they are a demonstration of the identity lifecycle from on-premises foundation through automated operations to entitlement governance, privileged access, and access recertification.
 
 ## The lifecycle
 
@@ -25,14 +25,17 @@ flowchart LR
     OPERATE["<b>OPERATE</b><br/>Lifecycle automation (JML)<br/>entra-iam-toolkit"]
     CIEM["<b>GOVERN</b><br/>Entitlement right-sizing (CIEM)<br/>azure-ciem-least-privilege"]
     IG["<b>GOVERN</b><br/>Access governance<br/>entra-identity-governance"]
+    PIM["<b>GOVERN</b><br/>Privileged access (PIM)<br/>entra-pim-privileged-access"]
 
     BUILD --> OPERATE --> CIEM
     OPERATE --> IG
+    OPERATE --> PIM
 
     style BUILD fill:#e6f0fa,stroke:#0067b8,stroke-width:2px,color:#0a2540
     style OPERATE fill:#eef4ff,stroke:#5391FE,stroke-width:2px,color:#0a2540
     style CIEM fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
     style IG fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
+    style PIM fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
 ```
 
 ## The labs
@@ -43,6 +46,7 @@ flowchart LR
 | [entra-iam-toolkit](./entra-iam-toolkit) | Operate | Joiner-mover-leaver automation, access reporting, and audit export with the Microsoft Graph PowerShell SDK |
 | [azure-ciem-least-privilege](./azure-ciem-least-privilege) | Govern | Detecting four over-provisioning findings from Activity logs and remediating them to least privilege with PIM, scope reduction, access reviews, and a custom role |
 | [entra-identity-governance](./entra-identity-governance) | Govern | Entitlement management (catalogs, access packages, approval, terms of use) and access reviews with auto-apply, plus governed external-user lifecycle |
+| [entra-pim-privileged-access](./entra-pim-privileged-access) | Govern | Just-in-time privileged access across Entra roles, groups, and Azure resources, with approval, Conditional Access step-up, PIM alerts, and privileged access reviews |
 
 ---
 
@@ -86,6 +90,16 @@ The request-and-recertify plane: how access is granted through self-service with
 
 [Details →](./entra-identity-governance)
 
+### Govern: Privileged access (PIM)
+
+[`entra-pim-privileged-access`](./entra-pim-privileged-access)
+
+The privileged-access plane: turning standing admin rights into just-in-time access so no one holds privilege they are not actively using. The lab makes roles eligible rather than active across all three PIM surfaces (Entra directory roles, PIM for Groups, and Azure resource roles), then hardens the activation path with a named-approver workflow and a Conditional Access authentication context that forces step-up MFA at the moment of elevation. It closes on the monitoring side with PIM alerts for privilege hygiene and an access review that recertifies who should stay eligible, with auto-apply removing those who should not. Includes a documented troubleshooting trail of a Conditional Access authentication-context activation loop.
+
+**Skills:** PIM for Entra roles, groups, and Azure resources, eligible vs active assignments, JIT activation with approval, Conditional Access authentication context step-up, PIM alerts and remediation, privileged access reviews, PIM audit analysis.
+
+[Details →](./entra-pim-privileged-access)
+
 ---
 
 ## Skills demonstrated across the platform
@@ -93,14 +107,14 @@ The request-and-recertify plane: how access is granted through self-service with
 - **Hybrid identity:** on-prem AD to Entra ID synchronization, Cloud Sync, password hash sync, UPN routing
 - **Identity lifecycle (JML):** automated provisioning, group and access management, desired-state reconciliation, enterprise offboarding
 - **Access governance:** entitlement management, access packages with approval, terms of use, connected organizations and external-user lifecycle
-- **Privileged access:** PIM eligible assignments, just-in-time activation with MFA and justification, break-glass reasoning
+- **Privileged access:** PIM across Entra roles, groups, and Azure resources, eligible-vs-active just-in-time activation with MFA, justification, and approval, Conditional Access authentication context step-up, break-glass reasoning
 - **Recertification and least privilege:** access reviews with auto-apply, least-privilege enforcement, custom RBAC roles, privilege-creep detection
 - **Detection and evidence:** KQL over Azure Activity and directory logs, audit export, access reporting
 - **Engineering rigour:** idempotency, graceful licensing degradation, honest failure handling, and structured root-cause analysis
 
 ## Tech stack
 
-Microsoft Entra ID (P2), Windows Server AD DS, Microsoft Entra Cloud Sync, Microsoft Graph PowerShell SDK, Azure RBAC, Azure Privileged Identity Management, Microsoft Entra entitlement management and access reviews, Azure Monitor and Log Analytics (KQL), Azure CLI, PowerShell 7+.
+Microsoft Entra ID (P2), Windows Server AD DS, Microsoft Entra Cloud Sync, Microsoft Graph PowerShell SDK, Azure RBAC, Azure Privileged Identity Management, Microsoft Entra entitlement management and access reviews, Conditional Access, Azure Monitor and Log Analytics (KQL), Azure CLI, PowerShell 7+.
 
 ## About
 

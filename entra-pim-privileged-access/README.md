@@ -252,10 +252,6 @@ Alert detail and one-click Fix:
 <details>
 <summary>Result</summary>
 
-Reviewer decision surface with recommendations:
-
-![Reviewer view](screenshots/Screenshot%202026-09-24%20112400.png)
-
 Denied decision on the eligible user:
 
 ![Denied user](screenshots/28_denied_pimuser2.png)

@@ -1,0 +1,32 @@
+{
+  "description": "Deterministic risk policy for the Entra non-human identity (NHI) inventory. Severity tiers are ordered info < low < medium < high < critical. The scanner raises an identity to the highest tier any rule triggers and never lowers it, so a model or operator can make a verdict stricter but not softer. This file is the source of truth for which Microsoft Graph application permissions count as privileged, kept as data so the watchlist can be reviewed and version-controlled on its own.",
+  "thresholds": {
+    "dormantDays": 90,
+    "secretSoonToExpireDays": 30
+  },
+  "appRoleTiers": {
+    "RoleManagement.ReadWrite.Directory": "critical",
+    "Application.ReadWrite.All": "critical",
+    "AppRoleAssignment.ReadWrite.All": "critical",
+    "Directory.ReadWrite.All": "high",
+    "PrivilegedAccess.ReadWrite.AzureAD": "high",
+    "User.ReadWrite.All": "high",
+    "Group.ReadWrite.All": "high",
+    "GroupMember.ReadWrite.All": "high",
+    "Device.ReadWrite.All": "high",
+    "Mail.ReadWrite": "high",
+    "Mail.Send": "high",
+    "MailboxSettings.ReadWrite": "high",
+    "Files.ReadWrite.All": "high",
+    "Sites.ReadWrite.All": "high",
+    "Directory.Read.All": "medium",
+    "User.Read.All": "medium",
+    "Group.Read.All": "medium",
+    "Application.Read.All": "medium",
+    "AuditLog.Read.All": "medium",
+    "Mail.Read": "medium",
+    "Files.Read.All": "medium",
+    "Sites.Read.All": "medium",
+    "Policy.Read.All": "medium"
+  }
+}

@@ -1,6 +1,6 @@
 # Entra Identity Platform
 
-Five hands-on labs that together cover the identity and access management lifecycle in Microsoft Entra ID and Azure: **build** the hybrid identity foundation, **operate** it with lifecycle automation, and **govern** access three ways, right-sizing what identities can do, governing how access is requested and recertified, and enforcing just-in-time privilege for administrators.
+Six hands-on labs that together cover the identity and access management lifecycle in Microsoft Entra ID and Azure: **build** the hybrid identity foundation, **operate** it with lifecycle automation, and **govern** access four ways, right-sizing what human-assigned principals can do, discovering and risk-ranking the non-human identities, governing how access is requested and recertified, and enforcing just-in-time privilege for administrators.
 
 ![Microsoft Entra ID](https://img.shields.io/badge/Microsoft_Entra_ID-P2-0067b8?logo=microsoftazure&logoColor=white)
 ![Azure RBAC](https://img.shields.io/badge/Azure_RBAC-Least_Privilege-0078D4?logo=microsoftazure&logoColor=white)
@@ -13,9 +13,9 @@ Five hands-on labs that together cover the identity and access management lifecy
 
 ## Overview
 
-This repository collects five self-contained labs that map to how an IAM team actually works: you stand up an identity environment, you run it day to day, and you govern what people can access and how they get it. Each lab is built and evidenced against a live tenant, and each has its own detailed README with steps, screenshots, and an honest troubleshooting record.
+This repository collects six self-contained labs that map to how an IAM team actually works: you stand up an identity environment, you run it day to day, and you govern what people and workloads can access and how they get it. Each lab is built and evidenced against a live tenant, and each has its own detailed README with steps, screenshots, and an honest troubleshooting record.
 
-The labs are grouped here so the through-line is visible. Individually they are five tasks. Together they are a demonstration of the identity lifecycle from on-premises foundation through automated operations to entitlement governance, privileged access, and access recertification.
+The labs are grouped here so the through-line is visible. Individually they are six tasks. Together they are a demonstration of the identity lifecycle from on-premises foundation through automated operations to entitlement governance, non-human identity hygiene, privileged access, and access recertification.
 
 ## The lifecycle
 
@@ -24,16 +24,19 @@ flowchart LR
     BUILD["<b>BUILD</b><br/>Hybrid identity foundation<br/>hybrid-identity-cloud-sync"]
     OPERATE["<b>OPERATE</b><br/>Lifecycle automation (JML)<br/>entra-iam-toolkit"]
     CIEM["<b>GOVERN</b><br/>Entitlement right-sizing (CIEM)<br/>azure-ciem-least-privilege"]
+    NHI["<b>GOVERN</b><br/>Non-human identity inventory<br/>entra-nhi-inventory"]
     IG["<b>GOVERN</b><br/>Access governance<br/>entra-identity-governance"]
     PIM["<b>GOVERN</b><br/>Privileged access (PIM)<br/>entra-pim-privileged-access"]
 
     BUILD --> OPERATE --> CIEM
+    OPERATE --> NHI
     OPERATE --> IG
     OPERATE --> PIM
 
     style BUILD fill:#e6f0fa,stroke:#0067b8,stroke-width:2px,color:#0a2540
     style OPERATE fill:#eef4ff,stroke:#5391FE,stroke-width:2px,color:#0a2540
     style CIEM fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
+    style NHI fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
     style IG fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
     style PIM fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
 ```
@@ -45,6 +48,7 @@ flowchart LR
 | [hybrid-identity-cloud-sync](./hybrid-identity-cloud-sync) | Build | On-prem Active Directory to Entra ID via Entra Cloud Sync and password hash sync, plus a full root-cause analysis of a sync-agent fault |
 | [entra-iam-toolkit](./entra-iam-toolkit) | Operate | Joiner-mover-leaver automation, access reporting, and audit export with the Microsoft Graph PowerShell SDK |
 | [azure-ciem-least-privilege](./azure-ciem-least-privilege) | Govern | Detecting four over-provisioning findings from Activity logs and remediating them to least privilege with PIM, scope reduction, access reviews, and a custom role |
+| [entra-nhi-inventory](./entra-nhi-inventory) | Govern | Read-only discovery and deterministic risk-ranking of every service principal and app registration: privileged application permissions, standing secrets, ownership gaps, and dormancy, scored into a CSV and HTML report |
 | [entra-identity-governance](./entra-identity-governance) | Govern | Entitlement management (catalogs, access packages, approval, terms of use) and access reviews with auto-apply, plus governed external-user lifecycle |
 | [entra-pim-privileged-access](./entra-pim-privileged-access) | Govern | Just-in-time privileged access across Entra roles, groups, and Azure resources, with approval, Conditional Access step-up, PIM alerts, and privileged access reviews |
 
@@ -80,6 +84,16 @@ The entitlement plane: not who someone is, but what they can do to cloud resourc
 
 [Details →](./azure-ciem-least-privilege)
 
+### Govern: Non-human identity inventory
+
+[`entra-nhi-inventory`](./entra-nhi-inventory)
+
+The non-human plane: the service principals, app registrations, and managed identities that outnumber people in a tenant, hold application permissions, carry long-lived secrets, and sign in with no user and no MFA. Where the CIEM lab right-sizes what human-assigned principals can do, this one answers the question an identity team usually cannot: which non-human identities exist, who owns them, how they authenticate, and which are dangerous. A read-only PowerShell tool enumerates every service principal through Microsoft Graph, gathers posture evidence for each (privileged application permissions, credential type and age, owners, federation, dormancy, enabled state), and ranks them with a deterministic, floor-only risk policy into a CSV and a self-contained HTML report. It is deliberately non-agentic, so every verdict is explainable and repeatable, and the scanner authenticates with read scopes only, which makes it a least-privilege identity that cannot change what it inspects. A seeded red-team canary proves each rule fires before a clean report is trusted.
+
+**Skills:** Microsoft Graph service-principal and application enumeration, app-role permission resolution, non-human identity credential and ownership hygiene, dormancy analysis, policy-as-data risk scoring, PowerShell module design, detection validation.
+
+[Details →](./entra-nhi-inventory)
+
 ### Govern: Access governance and recertification
 
 [`entra-identity-governance`](./entra-identity-governance)
@@ -109,6 +123,7 @@ The privileged-access plane: turning standing admin rights into just-in-time acc
 - **Access governance:** entitlement management, access packages with approval, terms of use, connected organizations and external-user lifecycle
 - **Privileged access:** PIM across Entra roles, groups, and Azure resources, eligible-vs-active just-in-time activation with MFA, justification, and approval, Conditional Access authentication context step-up, break-glass reasoning
 - **Recertification and least privilege:** access reviews with auto-apply, least-privilege enforcement, custom RBAC roles, privilege-creep detection
+- **Non-human identity governance:** service principal and app registration discovery, privileged application-permission analysis, credential and ownership hygiene, dormancy and risk scoring as policy-driven data
 - **Detection and evidence:** KQL over Azure Activity and directory logs, audit export, access reporting
 - **Engineering rigour:** idempotency, graceful licensing degradation, honest failure handling, and structured root-cause analysis
 

@@ -1,3 +1,7 @@
 # Generated inventory output (CSV/HTML) stays local, never committed.
 output/*
 !output/.gitkeep
+
+# Secrets for any unattended run (dedicated read-only app registration) never get committed.
+.env
+*.env

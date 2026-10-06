@@ -42,10 +42,10 @@ flowchart LR
 
 ## Environment
 
-The lab runs against a Microsoft Entra tenant with the Microsoft Graph PowerShell SDK installed (`Microsoft.Graph` module, PowerShell 7+). The service-principal sign-in activity used for dormancy is a beta Graph report that needs an Entra ID P1 or P2 plan and is not available in every tenant; the tool degrades gracefully and reports dormancy as unknown when it cannot read it, rather than assuming an identity is active.
+The lab runs against a Microsoft Entra tenant with PowerShell 7+ and the Microsoft Graph authentication module. Only `Microsoft.Graph.Authentication` is needed, not the full `Microsoft.Graph` meta-module, because the scanner authenticates with `Connect-MgGraph` and makes raw calls with `Invoke-MgGraphRequest` rather than using the typed cmdlets. The service-principal sign-in activity used for dormancy is a beta Graph report; in the P2 tenant this was built against it returned real last-sign-in ages for identities that had signed in and `unknown` for those with no recorded activity, so dormancy is never guessed. `-SkipSignInActivity` turns that lookup off for a faster run.
 
 ```powershell
-Install-Module Microsoft.Graph -Scope CurrentUser
+Install-Module Microsoft.Graph.Authentication -Scope CurrentUser
 ./scripts/Invoke-NhiInventory.ps1
 ```
 
@@ -60,7 +60,7 @@ For every service principal the tool gathers the facts that decide whether a non
 | Granted application permissions | `appRoleAssignments`, resolved from GUIDs to names | Application permissions are consent-free standing access; a few of them are tenant-takeover capable |
 | Credential type and age | `passwordCredentials`, `keyCredentials` | A standing client secret is a long-lived bearer token; its age is how long a leak would have gone unrotated |
 | Federation | `federatedIdentityCredentials` | Federated credentials remove the standing secret; their presence changes how a secret should be read |
-| Owners | `owners` | An identity with no owner has no accountable human and will never be recertified |
+| Owners | `owners` on the application object and the service principal | An identity with no owner has no accountable human and will never be recertified; the two objects keep separate owner lists, so both are read and the union is counted |
 | Origin | `appOwnerOrganizationId`, `servicePrincipalType` | In-tenant, third-party, Microsoft first-party, and managed identity carry very different risk |
 | Dormancy | `servicePrincipalSignInActivities` (beta) | An unused identity that still holds credentials is pure attack surface with no business value |
 | Enabled state | `accountEnabled` | A disabled identity cannot authenticate, so its exposure is cleanup rather than active risk |
@@ -74,7 +74,7 @@ The privileged-permission watchlist lives in [`policy/high-privilege-app-roles.j
 | Rule | Trigger | Tier |
 | :--- | :--- | :--- |
 | Privilege-escalation permission | `Application.ReadWrite.All`, `RoleManagement.ReadWrite.Directory`, `AppRoleAssignment.ReadWrite.All` | critical |
-| Broad write or data permission | `Directory.ReadWrite.All`, `User.ReadWrite.All`, `Group.ReadWrite.All`, `Mail.Send`, and similar | high |
+| Broad write or data permission | `Directory.ReadWrite.All`, `User.ReadWrite.All`, `Group.ReadWrite.All`, `AccessReview.ReadWrite.All`, `Mail.Send`, and similar | high |
 | Broad read permission | `Directory.Read.All`, `User.Read.All`, `Mail.Read`, and similar | medium |
 | No accountable owner | In-tenant app identity with zero owners | high |
 | Standing client secret | An enabled identity with one or more client secrets | high |
@@ -86,41 +86,81 @@ The privileged-permission watchlist lives in [`policy/high-privilege-app-roles.j
 
 ## Walkthrough
 
-> Screenshots are captured as you run each phase; the filenames noted below live under `screenshots/`.
+This walkthrough follows a real run against a live P2 tenant. The tenant already contained the agent identities from a separate agentic-IAM project (`jml-agent`, `nhi-auditor`, `review-reader`, `review-writer`), so the inventory produced genuine, unscripted findings on day one, including a real owner-attribution gap the first run surfaced and the scan was then corrected for.
 
-### Phase 1: Connect read-only
+### Phase 1: Run the read-only scan
 
-Run the tool and complete the interactive sign-in. The consent prompt shows exactly three read scopes and no write scope, which is the first thing to evidence: the scanner cannot modify what it inspects.
+One command does everything. It connects with the three read scopes, pages through every service principal and application registration following `@odata.nextLink`, and prints what it found. In this tenant that was 155 service principals filtered down to the 8 the tenant actually owns, which is the whole point of excluding Microsoft first-party noise.
 
-`Capture → screenshots/01-consent-read-only-scopes.png`: the consent screen listing Application.Read.All, Directory.Read.All, AuditLog.Read.All.
+```powershell
+./scripts/Invoke-NhiInventory.ps1
+```
 
-### Phase 2: Enumerate every non-human identity
+<details>
+<summary>Console: connect, enumerate, and risk summary</summary>
 
-The tool pages through all service principals and app registrations, following `@odata.nextLink` so nothing is missed in a large tenant, and prints the counts it found. Microsoft first-party apps are filtered out so the report is about the identities the tenant owns.
+<img src="screenshots/04-run-connect-enumerate.png" width="820" alt="Console connected to the tenant as the signed-in user, enumerating 154 service principals and 7 application registrations, then printing a risk summary of 6 high and 2 info">
 
-`Capture → screenshots/02-enumeration-counts.png`: the console showing the service-principal and application counts.
+The scanner signs in interactively and consents read scopes only (`Application.Read.All`, `Directory.Read.All`, `AuditLog.Read.All`), so it is itself a least-privilege identity that cannot change what it inspects.
+</details>
 
-### Phase 3: Gather posture evidence
+### Phase 2: Watch the evidence gather
 
-For each identity the tool resolves its application permissions from GUIDs to names, reads its credentials and owners, checks for federation, classifies its origin, and looks up sign-in dormancy. This is the slow phase in a large tenant; a progress bar tracks it, and `-SkipSignInActivity` skips the beta lookup when it is unavailable.
+For each identity the tool resolves application permissions from GUIDs to names, reads credentials and owners from both the application object and the service principal, checks federation, classifies origin, and looks up sign-in dormancy. A progress bar tracks it. The dormancy lookup is a beta report, so `-SkipSignInActivity` skips it for a faster run.
 
-`Capture → screenshots/03-evidence-progress.png`: the progress bar mid-run.
+```powershell
+./scripts/Invoke-NhiInventory.ps1 -SkipSignInActivity
+```
 
-### Phase 4: Score and report
+<details>
+<summary>Console: per-identity evidence gathering</summary>
 
-Each identity is scored against the policy and written to `output/inventory.csv` and `output/inventory.html`. The console prints a risk summary, worst tier first.
+<img src="screenshots/05-evidence-progress-skipsignin.png" width="820" alt="Console progress bar reading 'Gathering NHI evidence' with the current identity being processed">
+</details>
 
-`Capture → screenshots/04-risk-summary-console.png`: the console risk summary (counts by tier).
-`Capture → screenshots/05-inventory-html-report.png`: the HTML report, sorted with critical and high at the top.
+### Phase 3: Read the report
 
-A sanitized example of the output shape is in [`samples/inventory.sample.csv`](./samples/inventory.sample.csv).
+Each identity is scored against the policy and written to `output/inventory.csv` and a self-contained `output/inventory.html`. The report sorts worst-first and explains every verdict in a Why column. The corrected final run shows the tool working as intended: the two agents that hold write scopes stay high on their permissions, the two read-only agents sit at medium, and the owned apps with no privileged permissions fall to info.
 
-### Phase 5: Validate the detection, then remediate
+<details>
+<summary>HTML report: the corrected final inventory</summary>
 
-A clean report is only trustworthy if the rules have been seen to fire. Following [`redteam/seed-risky-app.md`](./redteam/seed-risky-app.md), plant one app that trips several rules at once (a critical Graph permission, a standing secret, and no owner), confirm it lands at the top as critical, then delete it and re-run to confirm the finding closes.
+<img src="screenshots/06-inventory-report-final.png" width="900" alt="Final HTML inventory: 0 critical, 2 high, 2 medium, 4 info. jml-agent high on User.ReadWrite.All, review-writer high on AccessReview.ReadWrite.All, nhi-auditor and review-reader medium on read scopes, corp.jefflab and JIRA SAML SSO at info with owners counted">
 
-`Capture → screenshots/06-redteam-canary-critical.png`: the seeded canary at the top of the report as critical, with all three findings in its Why column.
-`Capture → screenshots/07-after-remediation-clean.png`: the re-run after deletion, with the canary gone.
+- `jml-agent`: high on `User.ReadWrite.All`, a broad directory-write permission, with its owners now counted.
+- `review-writer`: high on `AccessReview.ReadWrite.All`, which can create and apply access-review decisions.
+- `nhi-auditor`, `review-reader`: medium, holding only read scopes.
+- `corp.jefflab`, `JIRA SAML SSO by Microsoft`: info once owners were added.
+- `Graph Explorer`, `Microsoft Graph Command Line Tools`: info, third-party tooling with no standing grant.
+
+Last-sign-in shows real ages (8d, 3d, 6d) where activity exists and `unknown` where none is recorded. A sanitized example of the output shape is in [`samples/inventory.sample.csv`](./samples/inventory.sample.csv).
+</details>
+
+### Phase 4: Validate the detection with a red-team canary
+
+A clean report is only trustworthy if the rules have been seen to fire. Following [`redteam/seed-risky-app.md`](./redteam/seed-risky-app.md), a throwaway app `nhi-redteam-canary` was created with `Application.ReadWrite.All` granted and admin-consented, a client secret added, and no owner. On the next run it landed at the very top as critical with all its findings named, then it was deleted and the re-run confirmed it was gone.
+
+<details>
+<summary>Console and report: the seeded canary flagged critical</summary>
+
+<img src="screenshots/02-redteam-canary-console.png" width="820" alt="Console risk summary now reading 1 critical, 6 high, 2 info across 9 identities after seeding the canary">
+
+<img src="screenshots/03-redteam-canary-report.png" width="900" alt="HTML report with nhi-redteam-canary at the top as critical, Why column reading 'holds Application.ReadWrite.All (critical); no accountable owner'">
+
+`Application.ReadWrite.All` is ranked critical on purpose: an identity holding it can add a credential to any other application or service principal and impersonate it, so a single over-granted app is a path to every other non-human identity in the tenant.
+</details>
+
+### Phase 5: A real finding, corrected: owner attribution
+
+The first run flagged every in-tenant app, including `jml-agent`, as having no accountable owner, even though `jml-agent` had two owners in the portal. That was a real defect in the scan, not in the tenant: owners were being read only from the service principal, whose owner list is separate from, and usually empty for, apps registered in-tenant. The fix reads owners from the application object as well and counts the union. Comparing the report against the portal is exactly the verification that caught it.
+
+<details>
+<summary>Before: the first run over-reporting unowned identities</summary>
+
+<img src="screenshots/01-first-run-owner-bug.png" width="900" alt="First HTML report showing corp.jefflab, JIRA SAML SSO, jml-agent, nhi-auditor, review-reader and review-writer all flagged high for 'no accountable owner', with an Owners count of 0 on every row">
+
+After the fix, and after adding owners to the two apps that genuinely had none (`corp.jefflab` and the gallery app `JIRA SAML SSO by Microsoft`, whose owners live under Enterprise applications rather than App registrations), the owner counts in Phase 3 line up with the portal and the false findings clear.
+</details>
 
 ## Key concepts demonstrated
 
@@ -139,7 +179,9 @@ A clean report is only trustworthy if the rules have been seen to fire. Followin
 
 ## Lessons Learned
 
-- **The hardest part of NHI security is the inventory, not the fix.** Remediating an over-permissioned app is a few clicks; knowing it exists, that nobody owns it, and that it has a two-year-old secret is the real work, and it is exactly what no one has time to do by hand.
+- **In Entra, an app has two owner lists, and the difference is easy to get wrong.** The application object (App registrations) and the service principal (Enterprise applications) keep separate owners, and apps registered in-tenant usually have an empty service-principal owner list. The first version of this scan read only the service principal, so it reported every in-tenant app as unowned, including one that visibly had two owners. The bug was caught by reading the report against the portal, and the fix reads both objects and counts the union. The lesson that matters for the writeup is the verification habit: a finding that disagrees with what you can see in the portal is a bug in the tool until proven otherwise.
+- **The hardest part of NHI security is the inventory, not the fix.** Remediating an over-permissioned app is a few clicks; knowing it exists, that nobody owns it, and what it can do is the real work, and it is exactly what no one has time to do by hand. In this tenant the scan immediately surfaced a gallery app and an in-tenant app with no owner, and a service principal that could write access-review decisions.
 - **Read-only is a feature, not a limitation.** Keeping the scanner read-only means it is safe to run often and by anyone, and it sidesteps the irony of a privileged write identity whose job is to find privileged identities. Remediation stays a separate, owned, audited action.
-- **Beta endpoints are honest about their limits, so the tool is too.** Service-principal sign-in activity is unavailable in some tenants and licence tiers, so dormancy is reported as unknown rather than guessed. An inventory that quietly treats "no data" as "safe" is worse than one that admits the gap.
-- **Excluding Microsoft first-party apps is a judgement that has to be stated.** It makes the report usable, but it is a scoping decision a reviewer should be able to see and override, which is why it is a single switch rather than a silent filter.
+- **The policy is data, so sharpening it is a one-line change.** When the real tenant turned up a service principal holding `AccessReview.ReadWrite.All`, adding that permission to the watchlist JSON was enough to flag it; no logic changed. That separation is what lets the definition of "privileged" be reviewed on its own.
+- **Report what you do not know, rather than assuming safe.** Sign-in dormancy comes from a beta report; it populated for identities with recorded activity and showed `unknown` for the rest, which is reported honestly rather than treated as "active" or "safe". An inventory that quietly turns no data into a clean bill of health is worse than one that admits the gap.
+- **Excluding Microsoft first-party apps is a judgement that has to be stated.** Filtering 155 service principals down to the 8 the tenant owns makes the report usable, but it is a scoping decision a reviewer should be able to see and override, which is why it is a single switch rather than a silent filter.

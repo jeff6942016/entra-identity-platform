@@ -14,6 +14,8 @@
     "Group.ReadWrite.All": "high",
     "GroupMember.ReadWrite.All": "high",
     "Device.ReadWrite.All": "high",
+    "AccessReview.ReadWrite.All": "high",
+    "AccessReview.ReadWrite.Membership": "high",
     "Mail.ReadWrite": "high",
     "Mail.Send": "high",
     "MailboxSettings.ReadWrite": "high",

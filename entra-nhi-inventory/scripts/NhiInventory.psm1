@@ -206,8 +206,20 @@ function Get-NhiInventory {
         $assignments = Get-GraphAllPages -Uri ('https://graph.microsoft.com/v1.0/servicePrincipals/' + $sp.id + '/appRoleAssignments?$select=appRoleId,resourceId,resourceDisplayName')
         $grantedRoles = Resolve-GrantedRoles -Assignments $assignments
 
-        # Owners (accountability).
-        $owners = Get-GraphAllPages -Uri ('https://graph.microsoft.com/v1.0/servicePrincipals/' + $sp.id + '/owners?$select=id,userPrincipalName,displayName')
+        # Owners (accountability). Owners can sit on the application object (what the
+        # App registrations > Owners blade sets) and/or on the service principal (the
+        # Enterprise applications > Owners blade, usually empty for apps you register).
+        # Count the union so an identity owned on either object is treated as owned.
+        $ownerIds = [System.Collections.Generic.HashSet[string]]::new()
+        foreach ($o in (Get-GraphAllPages -Uri ('https://graph.microsoft.com/v1.0/servicePrincipals/' + $sp.id + '/owners?$select=id'))) {
+            if ($o.id) { [void]$ownerIds.Add([string]$o.id) }
+        }
+        if ($appObjByAppId.ContainsKey($sp.appId)) {
+            foreach ($o in (Get-GraphAllPages -Uri ('https://graph.microsoft.com/v1.0/applications/' + $appObjByAppId[$sp.appId] + '/owners?$select=id'))) {
+                if ($o.id) { [void]$ownerIds.Add([string]$o.id) }
+            }
+        }
+        $ownerCount = $ownerIds.Count
 
         # Credentials come off the SP; federation lives on the application object (if one exists in-tenant).
         $cred = Get-CredentialFacts -PasswordCredentials $sp.passwordCredentials -KeyCredentials $sp.keyCredentials
@@ -228,7 +240,7 @@ function Get-NhiInventory {
             Enabled                  = [bool]$sp.accountEnabled
             GrantedRoles             = $grantedRoles
             GrantedRoleCount         = $grantedRoles.Count
-            OwnerCount               = @($owners).Count
+            OwnerCount               = $ownerCount
             SecretCount              = $cred.SecretCount
             CertCount                = $cred.CertCount
             FederatedCredentialCount = $fedCount

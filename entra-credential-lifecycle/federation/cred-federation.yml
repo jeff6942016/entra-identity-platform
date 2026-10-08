@@ -1,0 +1,30 @@
+name: entra-federation-proof
+
+# Proves an app can authenticate to Microsoft Graph with NO standing secret.
+# GitHub mints a short-lived OIDC token, Entra trusts it through a federated
+# identity credential, and the job exchanges it for a Graph token. There is no
+# client secret or certificate stored anywhere in this repo.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # required: lets the job request a GitHub OIDC token
+  contents: read
+
+jobs:
+  prove-no-secret:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure login via OIDC (no secret)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}   # repo VARIABLE, not a secret
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}    # repo VARIABLE, not a secret
+          allow-no-subscriptions: true
+
+      - name: Call Microsoft Graph with the federated token
+        run: |
+          az rest --method get \
+            --url "https://graph.microsoft.com/v1.0/applications?\$top=1&\$select=displayName" \
+            --resource https://graph.microsoft.com

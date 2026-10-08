@@ -1,6 +1,6 @@
 # Entra Identity Platform
 
-Six hands-on labs that together cover the identity and access management lifecycle in Microsoft Entra ID and Azure: **build** the hybrid identity foundation, **operate** it with lifecycle automation, and **govern** access four ways, right-sizing what human-assigned principals can do, discovering and risk-ranking the non-human identities, governing how access is requested and recertified, and enforcing just-in-time privilege for administrators.
+Seven hands-on labs that together cover the identity and access management lifecycle in Microsoft Entra ID and Azure: **build** the hybrid identity foundation, **operate** it with lifecycle automation, and **govern** access five ways, right-sizing what human-assigned principals can do, discovering and risk-ranking the non-human identities, driving their credentials down to no standing secret, governing how access is requested and recertified, and enforcing just-in-time privilege for administrators.
 
 ![Microsoft Entra ID](https://img.shields.io/badge/Microsoft_Entra_ID-P2-0067b8?logo=microsoftazure&logoColor=white)
 ![Azure RBAC](https://img.shields.io/badge/Azure_RBAC-Least_Privilege-0078D4?logo=microsoftazure&logoColor=white)
@@ -13,9 +13,9 @@ Six hands-on labs that together cover the identity and access management lifecyc
 
 ## Overview
 
-This repository collects six self-contained labs that map to how an IAM team actually works: you stand up an identity environment, you run it day to day, and you govern what people and workloads can access and how they get it. Each lab is built and evidenced against a live tenant, and each has its own detailed README with steps, screenshots, and an honest troubleshooting record.
+This repository collects seven self-contained labs that map to how an IAM team actually works: you stand up an identity environment, you run it day to day, and you govern what people and workloads can access and how they get it. Each lab is built and evidenced against a live tenant, and each has its own detailed README with steps, screenshots, and an honest troubleshooting record.
 
-The labs are grouped here so the through-line is visible. Individually they are six tasks. Together they are a demonstration of the identity lifecycle from on-premises foundation through automated operations to entitlement governance, non-human identity hygiene, privileged access, and access recertification.
+The labs are grouped here so the through-line is visible. Individually they are seven tasks. Together they are a demonstration of the identity lifecycle from on-premises foundation through automated operations to entitlement governance, non-human identity hygiene, credential lifecycle, privileged access, and access recertification.
 
 ## The lifecycle
 
@@ -25,11 +25,13 @@ flowchart LR
     OPERATE["<b>OPERATE</b><br/>Lifecycle automation (JML)<br/>entra-iam-toolkit"]
     CIEM["<b>GOVERN</b><br/>Entitlement right-sizing (CIEM)<br/>azure-ciem-least-privilege"]
     NHI["<b>GOVERN</b><br/>Non-human identity inventory<br/>entra-nhi-inventory"]
+    CRED["<b>GOVERN</b><br/>Credential lifecycle<br/>entra-credential-lifecycle"]
     IG["<b>GOVERN</b><br/>Access governance<br/>entra-identity-governance"]
     PIM["<b>GOVERN</b><br/>Privileged access (PIM)<br/>entra-pim-privileged-access"]
 
     BUILD --> OPERATE --> CIEM
     OPERATE --> NHI
+    NHI --> CRED
     OPERATE --> IG
     OPERATE --> PIM
 
@@ -37,6 +39,7 @@ flowchart LR
     style OPERATE fill:#eef4ff,stroke:#5391FE,stroke-width:2px,color:#0a2540
     style CIEM fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
     style NHI fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
+    style CRED fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
     style IG fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
     style PIM fill:#f2ecf7,stroke:#5C2D91,stroke-width:2px,color:#2a1440
 ```
@@ -49,6 +52,7 @@ flowchart LR
 | [entra-iam-toolkit](./entra-iam-toolkit) | Operate | Joiner-mover-leaver automation, access reporting, and audit export with the Microsoft Graph PowerShell SDK |
 | [azure-ciem-least-privilege](./azure-ciem-least-privilege) | Govern | Detecting four over-provisioning findings from Activity logs and remediating them to least privilege with PIM, scope reduction, access reviews, and a custom role |
 | [entra-nhi-inventory](./entra-nhi-inventory) | Govern | Read-only discovery and deterministic risk-ranking of every service principal and app registration: privileged application permissions, standing secrets, ownership gaps, and dormancy, scored into a CSV and HTML report |
+| [entra-credential-lifecycle](./entra-credential-lifecycle) | Govern | Auditing how every app registration authenticates and driving it down the hierarchy: rotate a client secret, upgrade to a certificate, then eliminate it with GitHub Actions workload identity federation so no standing credential remains |
 | [entra-identity-governance](./entra-identity-governance) | Govern | Entitlement management (catalogs, access packages, approval, terms of use) and access reviews with auto-apply, plus governed external-user lifecycle |
 | [entra-pim-privileged-access](./entra-pim-privileged-access) | Govern | Just-in-time privileged access across Entra roles, groups, and Azure resources, with approval, Conditional Access step-up, PIM alerts, and privileged access reviews |
 
@@ -94,6 +98,16 @@ The non-human plane: the service principals, app registrations, and managed iden
 
 [Details →](./entra-nhi-inventory)
 
+### Govern: Credential lifecycle
+
+[`entra-credential-lifecycle`](./entra-credential-lifecycle)
+
+The remediation half of the non-human identity story: where the inventory lab finds the standing secrets, this one kills them. A read-only PowerShell audit reports how every application registration authenticates, flattening its client secrets, certificates, and federated credentials with age and expiry, and scoring each app against a deterministic hierarchy where federation beats a certificate beats a client secret. Then it walks one app all the way down that hierarchy: a zero-downtime secret rotation, an upgrade to certificate-based authentication, and finally GitHub Actions workload identity federation so the app authenticates from CI with a short-lived OIDC token and no standing credential at all. The secret is removed at the end and the sibling NHI inventory is re-run to confirm the finding has cleared, so one tool detects and the other proves the fix.
+
+**Skills:** credential lifecycle management, secret rotation with a cutover window, certificate-based app authentication, GitHub Actions OIDC workload identity federation, Microsoft Graph credential enumeration, policy-as-data posture scoring.
+
+[Details →](./entra-credential-lifecycle)
+
 ### Govern: Access governance and recertification
 
 [`entra-identity-governance`](./entra-identity-governance)
@@ -124,12 +138,13 @@ The privileged-access plane: turning standing admin rights into just-in-time acc
 - **Privileged access:** PIM across Entra roles, groups, and Azure resources, eligible-vs-active just-in-time activation with MFA, justification, and approval, Conditional Access authentication context step-up, break-glass reasoning
 - **Recertification and least privilege:** access reviews with auto-apply, least-privilege enforcement, custom RBAC roles, privilege-creep detection
 - **Non-human identity governance:** service principal and app registration discovery, privileged application-permission analysis, credential and ownership hygiene, dormancy and risk scoring as policy-driven data
+- **Credential lifecycle and secretless auth:** secret rotation with a cutover window, certificate-based app authentication, and GitHub Actions workload identity federation (OIDC) to eliminate the standing secret
 - **Detection and evidence:** KQL over Azure Activity and directory logs, audit export, access reporting
 - **Engineering rigour:** idempotency, graceful licensing degradation, honest failure handling, and structured root-cause analysis
 
 ## Tech stack
 
-Microsoft Entra ID (P2), Windows Server AD DS, Microsoft Entra Cloud Sync, Microsoft Graph PowerShell SDK, Azure RBAC, Azure Privileged Identity Management, Microsoft Entra entitlement management and access reviews, Conditional Access, Azure Monitor and Log Analytics (KQL), Azure CLI, PowerShell 7+.
+Microsoft Entra ID (P2), Windows Server AD DS, Microsoft Entra Cloud Sync, Microsoft Graph PowerShell SDK, Azure RBAC, Azure Privileged Identity Management, Microsoft Entra entitlement management and access reviews, Conditional Access, workload identity federation (GitHub Actions OIDC), Azure Monitor and Log Analytics (KQL), Azure CLI, PowerShell 7+.
 
 ## About
 

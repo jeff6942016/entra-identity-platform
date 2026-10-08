@@ -1,0 +1,11 @@
+# Generated credential reports (CSV/HTML) stay local, never committed.
+output/*
+!output/.gitkeep
+
+# Secrets and exported certificates never get committed.
+.env
+*.env
+*.pfx
+*.cer
+*.key
+*.pem

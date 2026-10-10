@@ -164,7 +164,14 @@ function Get-AppPosture {
         if ($script:TierRank['high'] -gt $cur) { $cur = $script:TierRank['high'] }
     }
     elseif ($validCerts.Count -gt 0) {
-        $reasons += ("certificate credential, no federation ({0})" -f $validCerts.Count)
+        # A certificate is still a standing credential, so this stays low. If federation
+        # is already configured, the certificate is now redundant and should be removed
+        # to reach the no-standing-credential end state, so say so rather than "no federation".
+        if ($FederatedCount -gt 0) {
+            $reasons += ("certificate still present alongside federation, remove it to finish ({0})" -f $validCerts.Count)
+        } else {
+            $reasons += ("certificate credential, no federation ({0})" -f $validCerts.Count)
+        }
         if ($script:TierRank['low'] -gt $cur) { $cur = $script:TierRank['low'] }
     }
     elseif ($FederatedCount -gt 0) {

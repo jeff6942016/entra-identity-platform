@@ -70,13 +70,17 @@ The two overlays raise an otherwise-low or info app to medium, so a certificate 
 
 ## Walkthrough
 
-> Screenshots are captured as you run each phase; the filenames noted below live under `screenshots/`.
+This walkthrough follows a real run against a live P2 tenant, taking one app, `cred-lifecycle-demo`, from a standing client secret all the way to a secretless federated identity.
 
 ### Phase 0: Seed a standing secret to fix
 
 Create an app registration `cred-lifecycle-demo` and, under Certificates & secrets, add a client secret with a long expiry. This is the bad starting state the rest of the lab remediates.
 
-`Capture → screenshots/00-demo-app-standing-secret.png`: the app showing one client secret with a far-off expiry.
+<details>
+<summary>The demo app with a standing client secret</summary>
+
+<img src="screenshots/01-demo-app-standing-secret.png" width="820" alt="cred-lifecycle-demo Certificates and secrets blade showing one client secret expiring in 2027">
+</details>
 
 ### Phase 1: Detect every credential
 
@@ -86,15 +90,25 @@ Run the audit. It enumerates every application registration, flattens its creden
 ./scripts/Invoke-CredentialAudit.ps1
 ```
 
-`Capture → screenshots/01-credential-report.png`: the console summary and HTML report, with `cred-lifecycle-demo` flagged high.
+<details>
+<summary>Console: the audit flags the standing secret as high</summary>
+
+<img src="screenshots/02-audit-standing-secret-high.png" width="820" alt="Audit console reporting high 1, info 7, and one app with a standing client secret across 8 application registrations">
+</details>
 
 ### Phase 2: Rotate, then upgrade to a certificate
 
 First, a zero-downtime secret rotation: add a second client secret, cut the app over to it, then delete the old one. The overlap window is the point, there is never a moment where the app cannot authenticate.
 
-`Capture → screenshots/02-secret-rotation.png`: the two secrets overlapping, then the old one removed.
+<details>
+<summary>Rotation: two secrets overlap, then the old one is removed</summary>
 
-Second, upgrade from secret to certificate. Generate a self-signed certificate, upload the public key to the app, and authenticate with it instead, then remove the secret.
+<img src="screenshots/03-secret-rotation-overlap.png" width="820" alt="Client secrets blade showing two secrets, the original and a rotated one, during the cutover window">
+
+<img src="screenshots/04-secret-rotation-old-removed.png" width="820" alt="Client secrets blade showing only the rotated secret after the original is deleted">
+</details>
+
+Second, upgrade from secret to certificate. Generate a self-signed certificate, upload the public key to the app, authenticate with it, then remove the secret so the app holds a certificate and no secret.
 
 ```powershell
 $cert = New-SelfSignedCertificate -Subject "CN=cred-lifecycle-demo" -CertStoreLocation "Cert:\CurrentUser\My"
@@ -102,21 +116,45 @@ $cert = New-SelfSignedCertificate -Subject "CN=cred-lifecycle-demo" -CertStoreLo
 Connect-MgGraph -ClientId <appId> -TenantId <tenantId> -CertificateThumbprint $cert.Thumbprint
 ```
 
-`Capture → screenshots/03-cert-auth.png`: the app showing a certificate and no client secret, plus a successful certificate-based sign-in.
+<details>
+<summary>The app now holds a certificate and no client secret</summary>
 
-### Phase 3: Eliminate the secret with federation
+<img src="screenshots/05-certificate-uploaded-secret-gone.png" width="820" alt="Certificates tab showing the CN=cred-lifecycle-demo certificate and Client secrets showing zero">
+</details>
 
-Configure a federated identity credential on the app trusting GitHub Actions, scoped to this repo and the `main` branch, then run a workflow that authenticates with a short-lived OIDC token and no secret. Full steps are in [`federation/setup-federation.md`](./federation/setup-federation.md); the workflow is [`federation/cred-federation.yml`](./federation/cred-federation.yml). Finish by deleting the secret entirely.
+Re-run the audit as a checkpoint. The app drops from high to low: the standing secret is gone, replaced by a certificate.
 
-`Capture → screenshots/04-federated-credential-config.png`: the federated credential showing the subject (repo and branch).
-`Capture → screenshots/05-github-actions-no-secret.png`: the GitHub Actions run authenticating to Graph with no secret.
+<details>
+<summary>Console: the app is now low, zero standing secrets</summary>
 
-### Phase 4: Prove it, and tie it back to the inventory
+<img src="screenshots/06-audit-after-cert-low.png" width="820" alt="Audit console reporting low 1, info 7, and zero apps with a standing client secret">
+</details>
 
-Re-run the audit: `cred-lifecycle-demo` now reports federated with zero secrets. Then re-run the [`entra-nhi-inventory`](../entra-nhi-inventory) scan and confirm its standing-secret finding on the app has cleared. One tool detects, the other confirms the fix.
+### Phase 3: Eliminate the credential with federation
 
-`Capture → screenshots/06-credential-report-clean.png`: the re-run audit showing the app as federated, zero secrets.
-`Capture → screenshots/07-inventory-finding-cleared.png`: the NHI inventory re-run with the standing-secret finding gone.
+Configure a federated identity credential on the app trusting GitHub Actions, scoped to this repo and the `main` branch, then run a workflow that authenticates with a short-lived OIDC token and no secret. Full steps are in [`federation/setup-federation.md`](./federation/setup-federation.md); the workflow is [`federation/cred-federation.yml`](./federation/cred-federation.yml).
+
+The workflow acquires the Graph token with the federated client-assertion flow directly (request a GitHub OIDC token, exchange it at the Entra token endpoint, call Graph) rather than through `azure/login` and `az rest`. The CLI path cannot do it, because `azure/login` consumes the single-use OIDC token for an Azure Resource Manager token and then cannot mint a separate Graph token. Doing the exchange directly also keeps the whole flow visible.
+
+<details>
+<summary>The federated credential, and the workflow run with no secret</summary>
+
+<img src="screenshots/07-federated-credential-config.png" width="820" alt="Federated credentials tab showing a GitHub Actions federated credential scoped to the repo and main branch">
+
+<img src="screenshots/08-github-actions-no-secret.png" width="820" alt="GitHub Actions run entra-federation-proof succeeding, prove-no-secret job green, authenticated with no secret">
+</details>
+
+### Phase 4: Prove it, and finish the cleanup
+
+Re-run the audit. With federation configured and the secret gone, the app is no longer high. The report also catches the certificate still attached alongside federation and says to remove it to finish, which is the last standing credential on the app.
+
+<details>
+<summary>Report: secret eliminated, federation live, certificate flagged for removal</summary>
+
+<img src="screenshots/09-credential-report-federated.png" width="900" alt="Credential report HTML showing cred-lifecycle-demo at low with zero secrets, one certificate, and one federated credential">
+</details>
+
+To reach the true end state, delete the certificate from the app, then re-run the audit. `cred-lifecycle-demo` then reports info, federated with no standing credential. As a cross-lab proof, re-run the [`entra-nhi-inventory`](../entra-nhi-inventory) scan as well and confirm its standing-secret finding on the app has cleared. One tool detects, the other confirms the fix.
 
 A sanitized example of the report shape is in [`samples/credential-report.sample.csv`](./samples/credential-report.sample.csv).
 
@@ -140,4 +178,6 @@ A sanitized example of the report shape is in [`samples/credential-report.sample
 - **Rotation needs an overlap, or it is an outage.** The correct way to rotate a secret is to add the new one, cut over, and only then remove the old one. Deleting first and creating second is a self-inflicted outage, and documenting the overlap window is the difference between knowing the pattern and having run it.
 - **A certificate is better, but it is not free.** Moving from a secret to a certificate removes the plaintext bearer string, but the certificate then becomes the thing that expires and must be rotated. The audit treats an expiring certificate as a finding for exactly this reason.
 - **Deleting the secret in Entra is not the end of the lifecycle.** Copies of the old secret can still sit in CI variables, config files, and developer machines. Removing it from the directory closes the authentication path, but secret sprawl is a separate cleanup, and a credential audit only sees the directory side of it.
+- **Federation does not get you to clean on its own; the old credential has to go too.** In this run the app ended up with federation configured and the client secret removed, but the certificate from the interim step was still attached. The audit caught it and flagged it as the last standing credential to remove, which is the point: the goal state is no standing credential, not an app that merely also has federation.
+- **Reaching Microsoft Graph from GitHub Actions is not the same as reaching Azure.** The first version of the workflow used `azure/login` and `az rest`, which failed, because `azure/login` consumes the single-use OIDC token to get an Azure Resource Manager token and the CLI then cannot mint a separate Graph token. The working pattern is to do the federated client-assertion exchange directly: request the GitHub OIDC token, present it to the Entra token endpoint as the client assertion, and get a Graph token back, with no secret anywhere.
 - **Scope the federation trust as narrowly as the job allows.** A subject that trusts any branch, any environment, or a shared reusable workflow widens the trust well beyond one pipeline. Narrow it to the exact repo and ref, and treat broadening it as a change that needs review.

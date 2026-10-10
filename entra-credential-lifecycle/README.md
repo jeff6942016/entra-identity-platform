@@ -154,7 +154,21 @@ Re-run the audit. With federation configured and the secret gone, the app is no 
 <img src="screenshots/09-credential-report-federated.png" width="900" alt="Credential report HTML showing cred-lifecycle-demo at low with zero secrets, one certificate, and one federated credential">
 </details>
 
-To reach the true end state, delete the certificate from the app, then re-run the audit. `cred-lifecycle-demo` then reports info, federated with no standing credential. As a cross-lab proof, re-run the [`entra-nhi-inventory`](../entra-nhi-inventory) scan as well and confirm its standing-secret finding on the app has cleared. One tool detects, the other confirms the fix.
+To reach the true end state, delete the certificate from the app and re-run the audit. `cred-lifecycle-demo` now reports info, federated with no standing credential: the secret and the certificate are both gone, and only the short-lived federated token remains.
+
+<details>
+<summary>Report: the app reaches info, federated with no standing credential</summary>
+
+<img src="screenshots/10-credential-report-clean.png" width="900" alt="Credential report showing all eight application registrations at info, with cred-lifecycle-demo federated, zero secrets, zero certificates, one federated credential">
+</details>
+
+Finally, the cross-lab proof. Re-run the [`entra-nhi-inventory`](../entra-nhi-inventory) scan, the independent detector from the sibling lab, and confirm its standing-secret finding on the app has cleared. The app still appears there, now flagged only for having no accountable owner, a separate finding this lab does not touch, but the standing client secret it was carrying is gone. One tool drove the remediation, the other confirms it.
+
+<details>
+<summary>Cross-lab proof: the NHI inventory no longer flags a standing secret</summary>
+
+<img src="screenshots/11-inventory-finding-cleared.png" width="900" alt="NHI inventory showing cred-lifecycle-demo with zero secrets and one federated credential, its Why column reading only no accountable owner">
+</details>
 
 A sanitized example of the report shape is in [`samples/credential-report.sample.csv`](./samples/credential-report.sample.csv).
 
